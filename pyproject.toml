@@ -10,9 +10,16 @@ requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 dependencies = [
     "textual>=0.47.0",
-    # Nestor's verified-match engine backs almanac_seam's fuzzy citation
-    # fallback (stdlib-only; no egress). Repin to a tag/main once the Nestor
-    # branch merges.
+]
+
+[project.optional-dependencies]
+# Nestor's verified-match engine backs almanac_seam's OPTIONAL fuzzy citation
+# fallback (stdlib-only; no egress). It is not yet published to PyPI, so it lives
+# in an extra rather than the base install: `pip install .` succeeds without git
+# access to the repo, and the ledger + TUI + exact-match citations all run. Add
+# the fuzzy fallback with `pip install .[citations]`. Repin to a tag/main once
+# the Nestor branch merges (and drop it into base deps once Nestor is on PyPI).
+citations = [
     "nestor @ git+https://github.com/rudi193-cmd/Nestor@master",
 ]
 
