@@ -21,14 +21,38 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from nestor.matcher import StringMatcher
-
-# Nestor's string matcher backs the fuzzy fallback in search(). It is stdlib-only
-# (difflib) — importing it pulls no network, so this module stays inside the
-# no-egress zone (verified by tests/test_no_egress.py; 'nestor' is not forbidden).
-_MATCHER = StringMatcher()
+# Nestor's string matcher backs the OPTIONAL fuzzy fallback in search(). Nestor
+# is an unpublished git dependency (pyproject pins it from GitHub), so it may be
+# absent on a clean install — this seam imports it LAZILY: the ledger, the TUI,
+# and exact-match citations all run without it, and only the fuzzy fallback is
+# gated. It is stdlib-only (difflib) — importing it pulls no network, so this
+# module stays inside the no-egress zone (tests/test_no_egress.py; 'nestor' is
+# not forbidden).
+_MATCHER = None          # resolved StringMatcher, or None if Nestor is absent
+_MATCHER_TRIED = False   # probe the import once, not on every call
 # Minimum title/id/publisher similarity for a fuzzy citation to surface.
 _FUZZY_THRESHOLD = 0.55
+
+
+def _matcher():
+    """Nestor's StringMatcher, or None if Nestor isn't installed. The import is
+    attempted once and cached, so a clean install without the git dependency
+    degrades to exact-match citations instead of failing to import."""
+    global _MATCHER, _MATCHER_TRIED
+    if not _MATCHER_TRIED:
+        _MATCHER_TRIED = True
+        try:
+            from nestor.matcher import StringMatcher
+            _MATCHER = StringMatcher()
+        except ImportError:
+            _MATCHER = None
+    return _MATCHER
+
+
+def nestor_available() -> bool:
+    """Whether the fuzzy citation fallback is active (i.e. Nestor is installed).
+    Exact-match citations work regardless."""
+    return _matcher() is not None
 
 
 def almanac_root() -> Path:
@@ -101,15 +125,15 @@ def _candidate(v: dict, entry: dict) -> dict:
     }
 
 
-def _fuzzy_score(query_norm: str, entry: dict) -> float:
+def _fuzzy_score(matcher, query_norm: str, entry: dict) -> float:
     """Best Nestor similarity of the query against the entry's SHORT fields
     (title / id / publisher). Short-vs-short is where difflib is meaningful —
     unlike the concatenated blob — so a reworded or misspelled claim can still
-    find its source."""
+    find its source. Only called when a matcher is present."""
     best = 0.0
     for field in (entry.get("title"), entry.get("id"), entry.get("publisher")):
         if field:
-            best = max(best, _MATCHER.similarity(query_norm, _MATCHER.normalize(field)))
+            best = max(best, matcher.similarity(query_norm, matcher.normalize(field)))
     return best
 
 
@@ -121,14 +145,17 @@ def search(query: str, limit: int = 8) -> list[dict]:
     ranks live sources first — behavior unchanged. Only when NO entry matches
     exactly does a Nestor StringMatcher fuzzy fallback surface the closest
     sources by title/id/publisher similarity, so a reworded or misspelled claim
-    ('berkely erth temprature') still finds its evidence. Empty list when no
-    clones exist."""
+    ('berkely erth temprature') still finds its evidence. That fallback is gated
+    on Nestor being installed (the unpublished git dep); without it, exact
+    token-AND still works and search simply returns no fuzzy matches. Empty list
+    when no clones exist."""
     tokens = [t for t in query.lower().split() if t]
     if not tokens:
         return []
+    matcher = _matcher()  # None on a clean install without the Nestor git dep
     exact: list[dict] = []
     fuzzy: list[tuple[float, dict]] = []
-    query_norm = _MATCHER.normalize(query)
+    query_norm = matcher.normalize(query) if matcher else ""
     for v in verticals():
         try:
             catalog = json.loads((v["path"] / "catalog.json").read_text())
@@ -138,8 +165,8 @@ def search(query: str, limit: int = 8) -> list[dict]:
             text = _entry_text(entry)
             if all(t in text for t in tokens):
                 exact.append(_candidate(v, entry))
-            else:
-                score = _fuzzy_score(query_norm, entry)
+            elif matcher:  # fuzzy fallback is gated on Nestor being installed
+                score = _fuzzy_score(matcher, query_norm, entry)
                 if score >= _FUZZY_THRESHOLD:
                     fuzzy.append((score, _candidate(v, entry)))
     if exact:
