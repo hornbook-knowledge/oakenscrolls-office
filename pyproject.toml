@@ -1,13 +1,24 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=77", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "oakenscrolls-office"
-version = "0.2.0"
+dynamic = ["version"]
 description = "Personal calibration ledger — where certainty gets graded. Local-first, append-only, no egress."
+readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+# One classifier per Python the CI floor runs (.github/workflows/tests.yml);
+# tests/test_release_wiring.py keeps the two lists equal.
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
 dependencies = [
     "textual>=0.47.0",
 ]
@@ -15,13 +26,42 @@ dependencies = [
 [project.optional-dependencies]
 # Nestor's verified-match engine backs almanac_seam's OPTIONAL fuzzy citation
 # fallback (stdlib-only; no egress). It is not yet published to PyPI, so it lives
-# in an extra rather than the base install: `pip install .` succeeds without git
-# access to the repo, and the ledger + TUI + exact-match citations all run. Add
-# the fuzzy fallback with `pip install .[citations]`. Repin to a tag/main once
-# the Nestor branch merges (and drop it into base deps once Nestor is on PyPI).
+# in an extra rather than the base install: the base `pip install .` needs no
+# access to Nestor's git repo, and the ledger + TUI + exact-match citations all
+# run without it. Add the fuzzy fallback with `pip install .[citations]`. Repin
+# to a tag/main once the Nestor branch merges (and drop it into base deps once
+# Nestor is on PyPI).
 citations = [
     "nestor @ git+https://github.com/rudi193-cmd/Nestor@master",
+]
+# What CI installs on top of the base install. ruff is pinned exactly and the
+# same pin is used by the lint job in .github/workflows/tests.yml.
+dev = [
+    "pytest",
+    "pyyaml",
+    "ruff==0.16.7",
+    "tomli; python_version < '3.11'",
 ]
 
 [project.scripts]
 oakenscrolls-office = "app:main"
+
+[tool.setuptools]
+# Flat layout, listed explicitly. With eight top-level modules setuptools'
+# flat-layout auto-discovery refuses to guess and `pip install .` fails before
+# it reaches a single dependency; this list is what ships. stupid_tests.py is
+# the sandbox playground harness, not part of the installed package.
+py-modules = [
+    "almanac_seam",
+    "app",
+    "calibration",
+    "office_db",
+    "office_paths",
+    "web",
+    "willow_bridge",
+]
+
+[tool.setuptools_scm]
+# The version is the latest `vX.Y.Z` tag (release-please cuts them). A source
+# tree without git metadata — a tarball — builds as the fallback below.
+fallback_version = "0.2.0"
