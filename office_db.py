@@ -17,7 +17,6 @@ import json
 import sqlite3
 import time
 import uuid
-from typing import Optional
 
 from office_paths import db_path
 
@@ -71,7 +70,7 @@ def _check_confidence(confidence: float) -> float:
 def state_claim(
     claim: str,
     confidence: float,
-    due: Optional[int] = None,
+    due: int | None = None,
     tags: tuple[str, ...] = (),
 ) -> str:
     """Put a belief on the record. Returns the prediction id."""
@@ -114,8 +113,8 @@ def revise(pid: str, confidence: float) -> None:
 def resolve(
     pid: str,
     outcome: bool,
-    note: Optional[str] = None,
-    evidence: Optional[dict] = None,
+    note: str | None = None,
+    evidence: dict | None = None,
 ) -> None:
     """Grade a prediction. `evidence` is an optional citation record (e.g.
     almanac_seam.citation()) pinned to the resolving event forever."""
@@ -124,14 +123,14 @@ def resolve(
     _append(pid, "resolved", outcome=1 if outcome else 0, note=note, evidence=evidence)
 
 
-def void(pid: str, note: Optional[str] = None) -> None:
+def void(pid: str, note: str | None = None) -> None:
     """The claim turned out unresolvable or ambiguous. The record is kept."""
     if current(pid)["status"] != "open":
         raise ValueError("only an open prediction can be voided")
     _append(pid, "voided", note=note)
 
 
-def reopen(pid: str, note: Optional[str] = None) -> None:
+def reopen(pid: str, note: str | None = None) -> None:
     if current(pid)["status"] == "open":
         raise ValueError("prediction is already open")
     _append(pid, "reopened", note=note)
@@ -181,7 +180,7 @@ def current(pid: str) -> dict:
     return _derive(pred, events)
 
 
-def ledger(status: Optional[str] = None) -> list[dict]:
+def ledger(status: str | None = None) -> list[dict]:
     """All predictions (derived state), newest statement first."""
     with _db() as c:
         preds = c.execute("SELECT * FROM predictions ORDER BY stated_at DESC").fetchall()
@@ -193,7 +192,7 @@ def ledger(status: Optional[str] = None) -> list[dict]:
     return [r for r in rows if r["status"] == status] if status else rows
 
 
-def due_now(now: Optional[int] = None) -> list[dict]:
+def due_now(now: int | None = None) -> list[dict]:
     """Open predictions whose due date has arrived — the dew. Oldest due first."""
     now = int(time.time()) if now is None else now
     due = [r for r in ledger("open") if r["due"] is not None and r["due"] <= now]

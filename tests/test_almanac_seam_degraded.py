@@ -46,7 +46,6 @@ class _BlockNestor:
     def find_spec(self, name, path=None, target=None):
         if name == "nestor" or name.startswith("nestor."):
             raise ModuleNotFoundError(f"No module named {name!r}")
-        return None
 
 
 @pytest.fixture()

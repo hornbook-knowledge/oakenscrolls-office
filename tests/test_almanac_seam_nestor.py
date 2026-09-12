@@ -97,9 +97,9 @@ def test_graded_citation_seals_as_a_nestor_pair(seam, tmp_path):
     """A resolution graded against a source becomes a SEALED Nestor pair with
     provenance — the verified-match engine applied to public-record grading."""
     pytest.importorskip("nestor")
+    from nestor import cascade
     from nestor.entity import EntityResolver
     from nestor.sqlite_store import SqliteStore
-    from nestor import cascade
 
     cascade.set_ledger_path(tmp_path / "ledger.jsonl")  # keep the ledger in tmp
     resolver = EntityResolver(SqliteStore(str(tmp_path / "nestor.db")), domain="almanac-citation")

@@ -35,11 +35,10 @@ def stupid(story_if_pass):
 
 
 # --- imports deferred until env (OAKENSCROLL_DB) is set by the caller ---
-import office_db as db          # noqa: E402
-import calibration             # noqa: E402
-import almanac_seam            # noqa: E402
-import web                     # noqa: E402
-from app import OfficeApp      # noqa: E402
+import calibration
+import office_db as db
+import web
+from app import OfficeApp
 
 
 @stupid("the sandbox survives the stupid test — app boots, seed loads, scorecard renders")
@@ -85,12 +84,12 @@ def main() -> int:
     if not os.environ.get("OAKENSCROLL_DB"):
         print("refusing to run outside a sandbox — set OAKENSCROLL_DB (use ./sandbox.sh)")
         return 2
-    print("═══ stupid tests ═══  (sandbox: %s)\n" % os.environ["OAKENSCROLL_DB"])
+    print(f"═══ stupid tests ═══  (sandbox: {os.environ['OAKENSCROLL_DB']})\n")
     passed = 0
     for i, (name, story, fn) in enumerate(_TESTS):
         try:
             ok = fn()
-        except Exception as err:  # a raise is a fail, loudly
+        except Exception as err:  # noqa: BLE001 — a raise of any kind is a fail, loudly
             ok, story = False, f"{type(err).__name__}: {err}"
         mark = "✓" if ok else "✗"
         print(f"  {mark} [{i}] {name}")

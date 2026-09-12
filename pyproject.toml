@@ -65,3 +65,9 @@ py-modules = [
 # The version is the latest `vX.Y.Z` tag (release-please cuts them). A source
 # tree without git metadata — a tarball — builds as the fallback below.
 fallback_version = "0.2.0"
+
+[tool.ruff]
+# ruff's own default rule set at the pinned version (dev extra above, lint job
+# in tests.yml). The tree is kept clean rather than the rules loosened.
+target-version = "py310"
+extend-exclude = [".sandbox"]

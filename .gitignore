@@ -3,3 +3,7 @@ __pycache__/
 .venv/
 *.db
 .sandbox/
+.ruff_cache/
+dist/
+build/
+*.egg-info/

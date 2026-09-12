@@ -36,15 +36,19 @@ def svg_reliability(bins: list[dict], size: int = 440) -> str:
         return size - pad - rate * span
 
     parts = [
-        f'<svg viewBox="0 0 {size} {size}" width="{size}" height="{size}" '
-        'xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Reliability diagram">',
+        (
+            f'<svg viewBox="0 0 {size} {size}" width="{size}" height="{size}" '
+            'xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Reliability diagram">'
+        ),
         f'<rect width="{size}" height="{size}" fill="none"/>',
         # axes
         f'<line x1="{pad}" y1="{size-pad}" x2="{size-pad}" y2="{size-pad}" stroke="currentColor"/>',
         f'<line x1="{pad}" y1="{pad}" x2="{pad}" y2="{size-pad}" stroke="currentColor"/>',
         # the diagonal of honesty: y = x over the stated range
-        f'<line x1="{x(0.5)}" y1="{y(0.5)}" x2="{x(1.0)}" y2="{y(1.0)}" '
-        'stroke="currentColor" stroke-dasharray="4 4" opacity="0.5"/>',
+        (
+            f'<line x1="{x(0.5)}" y1="{y(0.5)}" x2="{x(1.0)}" y2="{y(1.0)}" '
+            'stroke="currentColor" stroke-dasharray="4 4" opacity="0.5"/>'
+        ),
     ]
     for frac in (0.5, 0.6, 0.7, 0.8, 0.9, 1.0):
         parts.append(
@@ -126,7 +130,7 @@ def handle(method: str, path: str) -> tuple[int, str, str]:
 
 def serve(port: int = PORT) -> None:
     class Handler(BaseHTTPRequestHandler):
-        def do_GET(self):  # noqa: N802 — http.server API
+        def do_GET(self):
             status, ctype, body = handle("GET", self.path.split("?")[0])
             data = body.encode("utf-8")
             self.send_response(status)

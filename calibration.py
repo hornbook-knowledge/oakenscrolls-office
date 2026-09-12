@@ -11,6 +11,7 @@ person stated, and whether the claim turned out true.
 from __future__ import annotations
 
 import math
+from itertools import pairwise
 
 _EPS = 1e-9
 
@@ -37,7 +38,7 @@ def bins(pairs: list[tuple[float, bool]]) -> list[dict]:
     actually right? Empty bands are returned with n=0 so the mirror shows the
     whole range, not just where you've dared to speak."""
     out = []
-    for lo, hi in zip(BIN_EDGES, BIN_EDGES[1:]):
+    for lo, hi in pairwise(BIN_EDGES):
         members = [(c, o) for c, o in pairs if lo <= c < hi or (hi == 1.0 and c == 1.0)]
         n = len(members)
         out.append({
