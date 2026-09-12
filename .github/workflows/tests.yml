@@ -1,0 +1,98 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  linux:
+    name: linux (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # One entry per "Programming Language :: Python :: 3.X" classifier in
+        # pyproject.toml; tests/test_release_wiring.py keeps the two equal.
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # setuptools-scm derives the version from tags
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: install (base + dev extra)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev]"
+      - name: pytest
+        run: python -m pytest tests -q
+
+  windows:
+    name: windows (py${{ matrix.python }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor and the ceiling of the linux matrix.
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: install (base + dev extra)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev]"
+      - name: pytest
+        run: python -m pytest tests -q
+
+  lint:
+    name: lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: install ruff (exact pin; the same pin as the dev extra)
+        run: python -m pip install ruff==0.16.7
+      - name: ruff check
+        run: |
+          ruff --version
+          ruff check .
+
+  # The one check branch protection points at. It runs even when a leg failed
+  # (if: always()) and scripts/ci_gate.py turns any non-success result —
+  # failure, cancelled, skipped, or a leg missing from `needs` — into a red
+  # check, so a skipped leg can never read as green.
+  test:
+    name: test
+    if: always()
+    needs: [linux, windows, lint]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: every leg must have succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: python scripts/ci_gate.py
