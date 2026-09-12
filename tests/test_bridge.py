@@ -12,7 +12,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 def modules(tmp_path, monkeypatch):
     monkeypatch.setenv("OAKENSCROLL_DB", str(tmp_path / "office.db"))
     monkeypatch.setenv("WILLOW_HOME", str(tmp_path / "willow"))
-    import office_db, willow_bridge
+    import office_db
+    import willow_bridge
     return office_db, willow_bridge
 
 

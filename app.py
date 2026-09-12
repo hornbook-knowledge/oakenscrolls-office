@@ -7,7 +7,7 @@ Usage:
   python3 app.py
 """
 import time
-from typing import Optional
+from typing import ClassVar
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -29,7 +29,7 @@ _DAY = 86400
 _DUE_UNITS = {"d": _DAY, "w": 7 * _DAY, "m": 30 * _DAY}
 
 
-def parse_due(text: str) -> Optional[int]:
+def parse_due(text: str) -> int | None:
     """'+3d', '+2w', '+1m' → epoch seconds; blank → open-ended."""
     text = text.strip().lower()
     if not text:
@@ -53,7 +53,7 @@ def parse_confidence(text: str) -> float:
     return value
 
 
-def when(ts: Optional[int]) -> str:
+def when(ts: int | None) -> str:
     if ts is None:
         return "—"
     delta = ts - int(time.time())
@@ -63,7 +63,7 @@ def when(ts: Optional[int]) -> str:
     return f"{sign}{delta // _DAY}d"
 
 
-def spark(fraction: Optional[float], width: int = 10) -> str:
+def spark(fraction: float | None, width: int = 10) -> str:
     if fraction is None:
         return " " * width
     filled = round(fraction * width)
@@ -82,7 +82,7 @@ class OfficeApp(App):
     #capture { display: none; }
     #capture.visible { display: block; }
     """
-    BINDINGS = [
+    BINDINGS: ClassVar[list[Binding]] = [
         Binding("n", "state_claim", "State a claim"),
         Binding("t", "resolve_true", "True"),
         Binding("f", "resolve_false", "False"),
@@ -97,11 +97,11 @@ class OfficeApp(App):
     def __init__(self) -> None:
         super().__init__()
         self.view = "open"
-        self.mode: Optional[str] = None    # None | claim | confidence | due | revise | cite
+        self.mode: str | None = None    # None | claim | confidence | due | revise | cite
         self.draft: dict = {}
         self.dew: list[dict] = []          # due predictions awaiting the person
         self.snoozed: set[str] = set()
-        self.citing_pid: Optional[str] = None   # cite-and-grade in progress
+        self.citing_pid: str | None = None   # cite-and-grade in progress
         self.candidates: list[dict] = []        # almanac sources on the board
 
     def compose(self) -> ComposeResult:
@@ -124,7 +124,7 @@ class OfficeApp(App):
     def reload_dew(self) -> None:
         self.dew = [d for d in db.due_now() if d["id"] not in self.snoozed]
 
-    def active_due(self) -> Optional[dict]:
+    def active_due(self) -> dict | None:
         return self.dew[0] if self.dew else None
 
     def render_dew(self) -> None:
@@ -221,8 +221,10 @@ class OfficeApp(App):
                 "and the curve appears here.[/dim]"
             )
         lines = [
-            f"[b]Graded:[/b] {s['n']}   [b]Brier:[/b] {s['brier']:.3f}   "
-            f"[b]Log:[/b] {s['log_score']:.3f}",
+            (
+                f"[b]Graded:[/b] {s['n']}   [b]Brier:[/b] {s['brier']:.3f}   "
+                f"[b]Log:[/b] {s['log_score']:.3f}"
+            ),
             f"[b]You say[/b] {s['mean_confidence']:.0%} · [b]you deliver[/b] {s['hit_rate']:.0%} · "
             + (
                 f"[b]overconfident by {s['overconfidence']:+.0%}[/b]"
@@ -260,7 +262,7 @@ class OfficeApp(App):
 
     # ---------- selection ----------
 
-    def selected_id(self) -> Optional[str]:
+    def selected_id(self) -> str | None:
         if self.view == "scorecard":
             return None
         board = self.query_one("#board", DataTable)
@@ -268,10 +270,10 @@ class OfficeApp(App):
             return None
         try:
             return board.coordinate_to_cell_key(board.cursor_coordinate).row_key.value
-        except Exception:
+        except Exception:  # noqa: BLE001 — any cursor or row-key miss means "nothing selected"
             return None
 
-    def target_id(self) -> Optional[str]:
+    def target_id(self) -> str | None:
         """t/f/o act on the surfaced due item first, else the selected open row."""
         item = self.active_due()
         if item:
@@ -360,7 +362,7 @@ class OfficeApp(App):
         if not self.mode:
             self.open_input("claim", "State the claim, in the direction you believe — Esc cancels")
 
-    def _grade(self, outcome: Optional[bool], voided: bool = False) -> None:
+    def _grade(self, outcome: bool | None, voided: bool = False) -> None:
         if self.mode:
             return
         if self.citing_pid and self.candidates:

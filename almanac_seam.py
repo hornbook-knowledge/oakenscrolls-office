@@ -19,7 +19,6 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import Optional
 
 # Nestor's string matcher backs the OPTIONAL fuzzy fallback in search(). Nestor
 # is an unpublished git dependency (pyproject pins it from GitHub), so it may be
@@ -61,7 +60,7 @@ def almanac_root() -> Path:
     ).expanduser()
 
 
-def _head_commit(repo: Path) -> Optional[str]:
+def _head_commit(repo: Path) -> str | None:
     """The clone's HEAD sha via plain file reads — no git binary, no subprocess."""
     head = repo / ".git" / "HEAD"
     try:
@@ -178,7 +177,7 @@ def search(query: str, limit: int = 8) -> list[dict]:
     return [cand for _, cand in fuzzy][:limit]
 
 
-def citation(candidate: dict, note: Optional[str] = None) -> dict:
+def citation(candidate: dict, note: str | None = None) -> dict:
     """The evidence record a resolution carries: which source vouched, in which
     vertical, at which catalog version, observed when. Facts only."""
     return {

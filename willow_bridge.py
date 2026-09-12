@@ -18,9 +18,9 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, Optional
 
 import office_db as db
 
@@ -36,7 +36,7 @@ def signal_path() -> Path:
     return home / "signals" / "oakenscroll_dew.json"
 
 
-def surface_due(now: Optional[int] = None) -> bool:
+def surface_due(now: int | None = None) -> bool:
     """Publish due predictions to the signal file. Facts only: id, claim,
     confidence, due. Returns True when anything was published."""
     if not proactive_enabled():
@@ -67,7 +67,7 @@ class PromotionRefused(RuntimeError):
     swallowed exceptions)."""
 
 
-def promote_resolved(pid: str, ingest: Optional[Callable[[dict], object]] = None) -> Optional[dict]:
+def promote_resolved(pid: str, ingest: Callable[[dict], object] | None = None) -> dict | None:
     """Build a knowledge atom from a resolved prediction and hand it to an
     injected ingest callable. With no callable, returns the atom without
     sending it anywhere — the caller decides; this module never phones home.
