@@ -9,6 +9,14 @@ Two things the old exact-token-AND matcher could never do:
 
 Offline: fake almanac clones under a temp ALMANAC_DATA_ROOT; Nestor over its
 reference in-repo SqliteStore. No network, no almanac-data checkout required.
+
+Nestor is an unpublished git dependency behind the `citations` extra (see
+pyproject.toml), so it is absent on a base `pip install .`. The tests below
+that actually exercise Nestor's fuzzy fallback or its resolver skip in that
+environment (pytest.importorskip("nestor")) rather than failing; the two
+exact-match tests need no matcher and keep running regardless — the mirror
+image of test_almanac_seam_degraded.py, which stubs Nestor OUT so its
+degraded path is exercised even when Nestor IS installed.
 """
 import json
 import sys
@@ -58,6 +66,7 @@ def seam(tmp_path, monkeypatch):
 
 
 def test_misspelled_claim_still_finds_its_source(seam):
+    pytest.importorskip("nestor")
     # Every token is misspelled, so exact token-AND matches nothing — but the
     # Nestor fuzzy fallback recovers the right source WITH provenance intact.
     hits = seam.search("berkely erth temprature")
@@ -68,6 +77,7 @@ def test_misspelled_claim_still_finds_its_source(seam):
 
 
 def test_reworded_claim_finds_source(seam):
+    pytest.importorskip("nestor")
     hits = seam.search("berkeley earth temp anomaly")
     assert hits and hits[0]["entry_id"] == "berkeley-earth-temperature"
 
@@ -86,6 +96,7 @@ def test_exact_match_behavior_unchanged(seam):
 def test_graded_citation_seals_as_a_nestor_pair(seam, tmp_path):
     """A resolution graded against a source becomes a SEALED Nestor pair with
     provenance — the verified-match engine applied to public-record grading."""
+    pytest.importorskip("nestor")
     from nestor.entity import EntityResolver
     from nestor.sqlite_store import SqliteStore
     from nestor import cascade
