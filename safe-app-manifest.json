@@ -1,7 +1,7 @@
 {
   "app_id": "oakenscrolls-office",
   "name": "oakenscrolls-office",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "safe_version": ">=2.0.0",
   "b17": "OAKOF",
   "agent_type": "tool",
@@ -19,7 +19,7 @@
     "file_write"
   ],
   "privacy_tier": "client_only",
-  "local_processing": 1.0,
+  "local_processing": 1,
   "entry_point": "app:main",
   "license": "Apache-2.0",
   "repository": "https://github.com/rudi193-cmd/oakenscrolls-office"
