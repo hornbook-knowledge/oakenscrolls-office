@@ -14,7 +14,9 @@ FORBIDDEN = {
 
 
 def _imports(path: Path) -> set[str]:
-    tree = ast.parse(path.read_text())
+    # utf-8 explicitly: Windows Pythons before 3.15 default to the locale codec
+    # and the tree carries non-ASCII on purpose.
+    tree = ast.parse(path.read_text(encoding="utf-8"))
     found = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
