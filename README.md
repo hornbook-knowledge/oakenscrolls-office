@@ -103,4 +103,6 @@ mean touching the network.
 
 Covers the math, the ledger rules (append-only, lifecycle, scoring pairs),
 the web routes (no socket needed), the bridge seams, and the no-egress AST
-scan.
+scan. Two legs: on a base install the Nestor-backed fuzzy-citation tests in
+`tests/test_almanac_seam_nestor.py` skip (Nestor is absent); with
+`pip install .[citations]` they run too.
