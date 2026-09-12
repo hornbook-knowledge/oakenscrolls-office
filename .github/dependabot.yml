@@ -1,0 +1,18 @@
+# The fleet Dependabot pack: pip and github-actions, weekly, with commit
+# prefixes that pass the pr-title guard and land in the right changelog
+# section (deps: cuts a release; ci: is hidden).
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: deps
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+      include: scope

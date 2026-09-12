@@ -1,0 +1,23 @@
+name: release-please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          # A release PR opened with GITHUB_TOKEN does not trigger the tests
+          # workflow on itself. Set a RELEASE_PLEASE_TOKEN secret (a fine-
+          # grained PAT with contents + pull-requests write) to get CI on
+          # release PRs; until then the fallback token still cuts releases.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "$comment-hidden-rule": "chore, ci, docs and test are hidden from the changelog: they change how the repo is worked on, not what it ships. They are listed so the section names stay stable if one is ever unhidden.",
+  "$comment-what-cuts-a-release": "build, deps, feat, fix, perf, refactor and security change what ships and appear in the changelog. feat bumps minor; a `!` in the title or a BREAKING CHANGE footer bumps major; everything else patch. Nothing is uploaded anywhere: a release is a tag plus GitHub release notes, and the version in safe-app-manifest.json is rewritten to match.",
+  "release-type": "simple",
+  "include-v-in-tag": true,
+  "include-component-in-tag": false,
+  "changelog-sections": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "security", "section": "Security" },
+    { "type": "perf", "section": "Performance" },
+    { "type": "refactor", "section": "Refactoring" },
+    { "type": "build", "section": "Build" },
+    { "type": "deps", "section": "Dependencies" },
+    { "type": "chore", "section": "Chores", "hidden": true },
+    { "type": "ci", "section": "CI", "hidden": true },
+    { "type": "docs", "section": "Documentation", "hidden": true },
+    { "type": "test", "section": "Tests", "hidden": true }
+  ],
+  "packages": {
+    ".": {
+      "package-name": "oakenscrolls-office",
+      "extra-files": [
+        { "type": "json", "path": "safe-app-manifest.json", "jsonpath": "$.version" }
+      ]
+    }
+  }
+}
