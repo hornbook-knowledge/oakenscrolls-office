@@ -15,7 +15,13 @@ What is pinned to what:
   - pr-title.yml runs on the four PR events and scripts/pr_title_guard.py
     enforces the conventional-commit line;
   - release-please is present with the hidden / release-cutting split the
-    config's $comment keys describe.
+    config's $comment keys describe;
+  - CodeQL runs one way or the other: an advanced workflow analysing python
+    and actions, OR GitHub's default setup recorded as configured for python
+    in .github/codeql-default-setup.json (the two cannot coexist — GitHub
+    refuses advanced uploads while default setup is on — and the API that
+    reports default setup needs a token CI does not have, so the tree carries
+    the record).
 """
 
 from __future__ import annotations
@@ -45,6 +51,8 @@ PR_EVENTS = ["opened", "edited", "synchronize", "reopened"]
 HIDDEN_TYPES = {"chore", "ci", "docs", "test"}
 RELEASE_CUTTING_TYPES = {"build", "deps", "feat", "fix", "perf", "refactor", "security"}
 COMMENT_KEYS = ("$comment-hidden-rule", "$comment-what-cuts-a-release")
+CODEQL_LANGUAGES = {"python", "actions"}
+CODEQL_RECORD = ROOT / ".github" / "codeql-default-setup.json"
 CLASSIFIER_RE = re.compile(r"^Programming Language :: Python :: (3\.\d+)$")
 RUFF_EXACT_RE = re.compile(r"ruff==(\d+\.\d+\.\d+)$")
 RUFF_ANY_RE = re.compile(r"ruff\s*([=<>!~]+)\s*([\d.]+)")
@@ -206,6 +214,43 @@ def check_release_please(config: dict, manifest: dict, workflow: dict) -> list[s
         problems.append("release-please.yml does not use googleapis/release-please-action")
     elif with_.get("config-file") != "release-please-config.json" or with_.get("manifest-file") != ".release-please-manifest.json":
         problems.append("release-please-action is not pointed at the config and manifest files")
+    return problems
+
+
+def codeql_workflow_languages(workflow: dict) -> set[str]:
+    """Languages an advanced CodeQL workflow analyses (matrix or init `with`)."""
+    found: set[str] = set()
+    for job in workflow.get("jobs", {}).values():
+        found.update(str(v) for v in job.get("strategy", {}).get("matrix", {}).get("language", []))
+        for step in job.get("steps", []):
+            if "codeql-action/init" in str(step.get("uses", "")):
+                langs = str(step.get("with", {}).get("languages", ""))
+                if "${{" not in langs:
+                    found.update(x.strip() for x in langs.split(",") if x.strip())
+    return found
+
+
+def check_codeql(codeql_workflow: dict | None, default_setup: dict | None) -> list[str]:
+    """One of the two ways, never neither, never both."""
+    if codeql_workflow is None and default_setup is None:
+        return [
+            (
+                "no CodeQL: neither .github/workflows/codeql.yml nor a "
+                ".github/codeql-default-setup.json record of default setup"
+            )
+        ]
+    if codeql_workflow is not None and default_setup is not None and default_setup.get("state") == "configured":
+        return ["both an advanced codeql.yml and default setup recorded as configured: GitHub refuses the workflow's uploads while default setup is on"]
+    problems = []
+    if codeql_workflow is not None:
+        missing = CODEQL_LANGUAGES - codeql_workflow_languages(codeql_workflow)
+        if missing:
+            problems.append(f"codeql.yml does not analyse {sorted(missing)}")
+        return problems
+    if default_setup.get("state") != "configured":
+        problems.append(f"default setup record says state={default_setup.get('state')!r}, not 'configured'")
+    if "python" not in default_setup.get("languages", []):
+        problems.append(f"default setup record languages {default_setup.get('languages')} do not cover python")
     return problems
 
 
@@ -450,3 +495,62 @@ def test_release_please_plant_an_empty_manifest_is_caught(rp_config, rp_wf):
 
 def test_release_please_manifest_is_the_version_before_the_first_tag(rp_manifest):
     assert re.fullmatch(r"\d+\.\d+\.\d+", rp_manifest["."])
+
+
+# --- CodeQL: advanced workflow OR recorded default setup -------------------------------
+
+def _codeql_workflow() -> dict | None:
+    path = WORKFLOWS / "codeql.yml"
+    return _yaml(path) if path.exists() else None
+
+
+def _codeql_record() -> dict | None:
+    return json.loads(_text(CODEQL_RECORD)) if CODEQL_RECORD.exists() else None
+
+
+ADVANCED_WF = {
+    "jobs": {
+        "analyze": {
+            "strategy": {"matrix": {"language": ["python", "actions"]}},
+            "steps": [{"uses": "github/codeql-action/init@v4", "with": {"languages": "${{ matrix.language }}"}}],
+        }
+    }
+}
+
+
+def test_codeql_runs_one_way_or_the_other():
+    assert check_codeql(_codeql_workflow(), _codeql_record()) == []
+
+
+def test_codeql_plant_neither_is_caught():
+    problems = check_codeql(None, None)
+    assert problems and "no CodeQL" in problems[0], problems
+
+
+def test_codeql_plant_both_is_caught():
+    problems = check_codeql(ADVANCED_WF, {"state": "configured", "languages": ["python"]})
+    assert problems and "both" in problems[0], problems
+
+
+def test_codeql_plant_a_workflow_missing_actions_is_caught():
+    wf = copy.deepcopy(ADVANCED_WF)
+    wf["jobs"]["analyze"]["strategy"]["matrix"]["language"] = ["python"]
+    problems = check_codeql(wf, None)
+    assert problems and "actions" in problems[0], problems
+    assert check_codeql(ADVANCED_WF, None) == []
+
+
+def test_codeql_plant_default_setup_off_or_without_python_is_caught():
+    off = check_codeql(None, {"state": "not-configured", "languages": []})
+    assert any("not 'configured'" in p for p in off), off
+    no_python = check_codeql(None, {"state": "configured", "languages": ["javascript"]})
+    assert any("cover python" in p for p in no_python), no_python
+    assert check_codeql(None, {"state": "configured", "languages": ["python"]}) == []
+
+
+def test_codeql_record_is_dated_and_says_how_it_was_observed():
+    record = _codeql_record()
+    if record is None:
+        pytest.skip("advanced codeql.yml in use; no default-setup record needed")
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", record["observed"])
+    assert record["evidence"].strip()

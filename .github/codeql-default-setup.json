@@ -1,0 +1,7 @@
+{
+  "$comment": "CodeQL runs through GitHub's default setup on this repository, not through a workflow in this tree. GitHub refuses SARIF uploads from an advanced-configuration workflow while default setup is enabled, so the two cannot coexist; tests/test_release_wiring.py requires one or the other. To move to the advanced workflow later (for example to add `actions` scanning from the tree): disable default setup under Settings > Code security > Code scanning > CodeQL analysis, restore .github/workflows/codeql.yml (last present at commit 613d4db of PR #5, analysing python and actions), and delete this file.",
+  "state": "configured",
+  "languages": ["python"],
+  "observed": "2026-09-12",
+  "evidence": "GET /repos/hornbook-knowledge/oakenscrolls-office/code-scanning/default-setup answers 403 'Resource not accessible by integration' to the app token available in the session, so state and languages were read from what default setup actually ran: the repository lists the dynamic workflow dynamic/github-code-scanning/codeql (active), and its run 34684598592 on PR #5 head 613d4db had exactly one job, 'Analyze (python)', which succeeded. The advanced codeql.yml in the same PR failed with 'CodeQL analyses from advanced configurations cannot be processed when the default setup is enabled'. Adding `actions` to default setup's language list is a repository setting, not a file in this tree."
+}
