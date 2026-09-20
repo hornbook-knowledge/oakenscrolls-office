@@ -39,7 +39,7 @@ citations = [
 dev = [
     "pytest",
     "pyyaml",
-    "ruff==0.16.7",
+    "ruff==0.16.8",
     "tomli; python_version < '3.11'",
 ]
 
